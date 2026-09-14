@@ -1,0 +1,15 @@
+# MCP visibility panel: read-only observability of mounted MCP servers.
+# Mounted as an isolated plugin group so a fault cannot take down the host.
+# The plugin enumerates `mcp__<server>__<tool>` tool names from the shared
+# @deepseek-ai/dsh-tools registry (dsh-mcp-client publishes its tools there;
+# it has no introspection API of its own) and exposes the result via a
+# /mcp slash command (live) and a read-only settings section (mount snapshot).
+- insert:
+    - id: mcp-panel
+      name: '@deepseek-ai/cordis-plugin-group'
+      group: true
+      isolate:
+        mcpPanel: true
+      config:
+        - id: mcp-panel-runtime
+          name: 'dsh-plugin-mcp-panel'
