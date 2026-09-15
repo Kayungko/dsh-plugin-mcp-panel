@@ -109,7 +109,7 @@ window.__ModuleLoader__.load({
 				h("p", { className: "mcpPanelIntro" }, "当前 DSH 已挂载的 MCP server 清单（只读快照；实时查询请在聊天中运行 /mcp）。"),
 				h("p", { className: "mcpPanelSummary" }, `已连接 ${total} 个 MCP server`),
 				servers.length === 0
-					? h("p", { className: "mcpPanelEmpty" }, "尚未挂载任何 MCP server。MCP 由插件通过 Cordis 编程式挂载，此处只做展示。")
+					? h("p", { className: "mcpPanelEmpty" }, "尚未挂载任何 MCP server（若刚启动，可能仍在扫描中，数秒后自动更新；实时查询请在聊天中运行 /mcp）。")
 					: h("ul", { className: "mcpPanelList" },
 						servers.map((server) => h("li", { key: server.name, className: "mcpPanelRow" },
 							h("span", { className: "mcpPanelDot mcpPanelDotActive" }, "●"),
