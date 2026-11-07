@@ -8,8 +8,6 @@
     - id: mcp-panel
       name: '@deepseek-ai/cordis-plugin-group'
       group: true
-      isolate:
-        mcpPanel: true
       config:
         - id: mcp-panel-runtime
           name: 'dsh-plugin-mcp-panel'

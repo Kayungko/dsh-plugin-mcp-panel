@@ -1,12 +1,9 @@
 /**
  * dsh-plugin-mcp-panel — client module (0.1.0)
  *
- * One surface: a first-level `settings.section` ("MCP 连接") that renders the
- * mount-time snapshot of mounted MCP servers. The snapshot travels through the
- * plugin's durable settings section (`mcp-panel`, installed host-side in
- * index.mjs) — the ONLY sanctioned host→client channel a slots-only bundle can
- * read (verified against dsh-plugin-task-coordinator 0.25.2: client injects
- * ["slots"] and sights services through ctx.get()).
+ * One surface: a first-level `settings.section` ("MCP 连接") reading the
+ * ephemeral snapshot through the host's read-only mcpPanel.snapshot RPC.
+ * Polls are serialized and disposed with the view; no Profile writes.
  *
  * Read-only by construction: the page renders the snapshot and offers no
  * writes. The `/mcp` slash command (host-side) remains the authoritative live
@@ -52,45 +49,42 @@ window.__ModuleLoader__.load({
 		}
 
 		let hostCtx = null;
-		let boundScope = null;
-		/**
-		 * Bind the plugin's settings namespace once sighted. ctx.get() bypasses
-		 * the runner's inject-declaration gate (slots-only bundle), matching the
-		 * task-coordinator precedent. Every read is guarded: a missing service
-		 * degrades to null and the page renders a diagnostics line, never a crash.
-		 */
-		const getBoundScope = () => {
-			if (boundScope) return boundScope;
-			try {
-				const svc = hostCtx && (typeof hostCtx.get === "function" ? hostCtx.get("settingsScope") : hostCtx.settingsScope);
-				if (typeof svc?.bind === "function") {
-					const scope = svc.bind({ namespace: NS_SETTINGS });
-					if (scope && typeof scope.getSnapshot === "function") boundScope = scope;
-				}
-			} catch { /* retry on the next render */ }
-			return boundScope;
-		};
+        const getRemote = () => {
+            try {
+                // Third-party namespaces are not in the core's generated Remote face.
+                const rpc = hostCtx?.get?.('connection')?.rpc;
+                return typeof rpc?.call === 'function'
+                    ? { snapshot: () => rpc.call('/api', 'mcpPanel/snapshot', { args: {} }) }
+                    : null;
+            } catch { return null; }
+        };
 
 		function McpPanelTab() {
-			const scope = getBoundScope();
-			const [snap, setSnap] = react.useState(null);
-			react.useEffect(() => {
-				if (!scope) return undefined;
-				try {
-					setSnap(scope.getSnapshot());
-					return scope.subscribe(() => {
-						try { setSnap(scope.getSnapshot()); } catch { /* keep the last good snapshot */ }
-					});
-				} catch (error) {
-					setSnap({ error: String((error && error.message) || error) });
-					return undefined;
-				}
-			}, [scope]);
+            const face = getRemote();
+            const [snap, setSnap] = react.useState(null);
+            react.useEffect(() => {
+                let cancelled = false;
+                let timer;
+                const read = async () => {
+                    try {
+                        const current = getRemote();
+                        if (!current) throw new Error('MCP 清单服务暂不可用');
+                        const result = await current.snapshot();
+                        if (result?.ok === false) throw new Error(result.error?.message || '读取失败');
+                        if (!cancelled) setSnap({ value: result && 'value' in result ? result.value : result });
+                    } catch (error) {
+                        if (!cancelled) setSnap({ error: String(error?.message || error) });
+                    }
+                    if (!cancelled) timer = setTimeout(read, 2500);
+                };
+                void read();
+                return () => { cancelled = true; clearTimeout(timer); };
+            }, []);
 
 			const h = react.createElement;
-			if (!scope) {
+			if (!face && !snap) {
 				return h("div", { className: "mcpPanel" },
-					h("p", { className: "mcpPanelError" }, "设置服务不可用（宿主缺少 settingsScope），无法读取 MCP 挂载清单；可在聊天中运行 /mcp 查看实时清单。"));
+					h("p", { className: "mcpPanelError" }, "MCP 清单服务正在连接；可在聊天中运行 /mcp 查看实时清单。"));
 			}
 			if (snap && snap.error) {
 				return h("div", { className: "mcpPanel" },

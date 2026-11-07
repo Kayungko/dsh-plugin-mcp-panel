@@ -5,7 +5,7 @@ DSH 的 MCP 可见性面板（只读）。解决一个具体痛点：DSH 通过 
 ## 能做什么
 
 - **`/mcp` slash 命令**：实时读取 `@deepseek-ai/dsh-tools` 注册表，列出当前挂载的 MCP server + 各 server 工具数。每次调用实时、权威、零 token（不经过模型）。
-- **设置页「MCP 连接」一级 section**：渲染挂载时快照（server 名 + 工具数 + 活跃状态）。
+- **设置页「MCP 连接」一级 section**：通过只读 `mcpPanel.snapshot` RPC 每 2.5 秒读取清单（server 名 + 工具数 + 活跃状态）。
 
 ## 明确不做什么
 
@@ -20,7 +20,9 @@ dsh-mcp-client 是"挂载即忘"的桥，**没有枚举/自省 API**。本插件
 由此产生的两条边界：
 
 1. **只见"注册了 ≥1 工具"的活跃 server**。启动失败被 contain（0 工具）的 server 不可见——`active` 字段因此对注册表枚举恒为 true（保留该字段仅为向前兼容）。
-2. **设置页是挂载时快照**，不是实时。MCP server 在宿主启动时挂载，故快照通常等于实况；要实时请用 `/mcp`（宿主侧实时读）。
+2. **设置页定期读取快照**。后台连接失败会显示错误并重试；即时查询仍可使用 `/mcp`。快照不再写入用户设置或 Profile，避免触发配置重载。
+
+0.2.0 适配 DSH NEXT 2.0.22-next / 内核 0.2.2-rc.1，使用 `TypertRemoteService` 发布只读方法，不再依赖已移除的 `settings.installSection/settingsScope`。RPC 服务需要对宿主 Gateway 可见，因此插件组不隔离 `mcpPanel` 服务。
 
 ## 安装
 
@@ -31,7 +33,7 @@ dsh-mcp-client 是"挂载即忘"的桥，**没有枚举/自省 API**。本插件
 ## 目录结构
 
 ```
-index.mjs      入口：注入 tools/commands/settings，挂 /mcp + 只读 settings section
+index.mjs      入口：注入 tools/commands，挂 /mcp + 只读 MCP 清单 RPC
 list.mjs       纯枚举逻辑（mcp__<server>__<tool> → 清单），单测覆盖
 commands.mjs   /mcp 命令注册与渲染
 config.mjs     resolveConfig（enabled 开关）

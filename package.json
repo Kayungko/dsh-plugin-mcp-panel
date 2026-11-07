@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-mcp-panel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Read-only MCP visibility panel for DeepSeek Harness: surfaces which MCP servers are mounted (server name, tool count, active status) through a first-level settings section and a /mcp slash command. Pure observability — no config editing, no credential handling.",
   "type": "module",
   "main": "index.mjs",
@@ -31,10 +31,12 @@
     "test": "node --test test/*.test.mjs"
   },
   "peerDependencies": {
-    "@deepseek-ai/schemastery": ">=3.18.0 <4"
+    "@deepseek-ai/schemastery": ">=3.18.0 <4",
+    "@deepseek-ai/dsh-typert-protocol": ">=0.2.2-rc.1 <0.2.3"
   },
   "engines": {
-    "node": "^22.19.0 || >=24"
+    "node": "^22.19.0 || >=24",
+    "dsh": ">=0.2.2-rc.1 <0.2.3"
   },
   "keywords": [
     "deepseek-harness",
